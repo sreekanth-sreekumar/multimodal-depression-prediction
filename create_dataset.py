@@ -53,3 +53,11 @@ if __name__ == '__main__':
     AudioDataset('train')
     VideoDataset('train')
     TextDataset('train')
+
+    AudioDataset('test')
+    VideoDataset('test')
+    TextDataset('test')
+
+    AudioDataset('dev')
+    VideoDataset('dev')
+    TextDataset('dev')

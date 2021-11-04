@@ -9,7 +9,7 @@ import joblib
 stop = set(stopwords.words('english'))
 # Getting pretrained glove vectors
 glove = {}
-with open('glove.6B.50d.txt', 'r') as f:
+with open('glove.6B.50d.txt', 'r', encoding='utf-8') as f:
     for l in f:
         line = l.split(' ')
         word = line[0]
