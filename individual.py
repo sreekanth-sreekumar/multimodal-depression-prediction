@@ -100,7 +100,7 @@ class AudioDataset():
                 with open('./data/' + id + '_COVAREP.csv') as file:
                     csv_reader = csv.reader(file)
                     for row in csv_reader:
-                        if not int(row[1]):
+                        if int(row[1]):
                            covarep = np.append(covarep, [float(f) for f in row[2:]])
 
                 total_audio[id] = covarep
@@ -134,6 +134,3 @@ class VideoDataset():
     def save_video_features(self, feats):
         with open('./saved_data/video_features_' + self.split + '.sav', 'wb') as f:
             joblib.dump(feats, f)
-
-if __name__ == '__main__':
-    load_glove_embeddings()
