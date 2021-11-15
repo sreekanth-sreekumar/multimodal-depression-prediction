@@ -5,7 +5,6 @@ import torch.nn.functional as F
 import sys
 
 # Code adapted from the fairseq repo.
-
 class MultiheadAttention(nn.Module):
     """Multi-headed attention.
     See "Attention Is All You Need" for more details.
