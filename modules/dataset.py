@@ -93,15 +93,19 @@ class MultDataset(Dataset):
                     # Adding Zero Padding to Each Feature Based on Max Length of that Modality
                     if key == 'audio':
                         pad_rep = torch.zeros(max_audio_len - sample['audio_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
+
                     elif key == 'video':
                         pad_rep = torch.zeros(max_video_len - sample['video_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
+                    
                     elif key == 'text':
                         pad_rep = torch.zeros(max_text_len - sample['text_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
+
                     else:
                         padded = sample[key]
+                        
                     batch[key].append(padded)
 
             #Put Each Row of Data From Batch on Device
