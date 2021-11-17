@@ -79,16 +79,19 @@ class MultDataset(Dataset):
                     # Adding padding to each features
                     if key == 'audio':
                         pad_rep = torch.zeros(max_audio_len - sample['audio_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
+
                     elif key == 'video':
                         pad_rep = torch.zeros(max_audio_len - sample['video_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
                     
                     elif key == 'text':
                         pad_rep = torch.zeros(max_audio_len - sample['text_length'], sample[key].shape[1])
-                        padded = torch.cat((sample[key]))
+                        padded = torch.cat((sample[key], pad_rep), dim=0)
+
                     else:
                         padded = sample[key]
+                        
                     batch[key].append(padded)
 
             for key in batch.keys():
