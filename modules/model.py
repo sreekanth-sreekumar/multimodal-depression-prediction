@@ -1,9 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
-
 from modules.transformer import TransformerEncoder
-
 
 class MULTModel(nn.Module):
     def __init__(self, hyp_params):
@@ -11,6 +9,7 @@ class MULTModel(nn.Module):
         Construct a MulT model.
         """
         super(MULTModel, self).__init__()
+
         self.orig_d_l, self.orig_d_a, self.orig_d_v = hyp_params.orig_d_l, hyp_params.orig_d_a, hyp_params.orig_d_v
         self.d_l, self.d_a, self.d_v = 30, 30, 30
         self.num_heads = hyp_params.num_heads
@@ -26,9 +25,9 @@ class MULTModel(nn.Module):
 
         combined_dim = 2 * (self.d_l + self.d_a + self.d_v)
         
-        output_dim = hyp_params.output_dim        # This is actually not a hyperparameter :-)
+        output_dim = hyp_params.output_dim # This is actually not a hyperparameter :-)
 
-        # 1. Temporal convolutional layers
+        # 1. Temporal Convolutional Layers
         self.proj_l = nn.Conv1d(self.orig_d_l, self.d_l, kernel_size=1, padding=0, bias=False)
         self.proj_a = nn.Conv1d(self.orig_d_a, self.d_a, kernel_size=1, padding=0, bias=False)
         self.proj_v = nn.Conv1d(self.orig_d_v, self.d_v, kernel_size=1, padding=0, bias=False)
@@ -50,7 +49,7 @@ class MULTModel(nn.Module):
         self.trans_a_mem = self.get_network(self_type='a_mem', layers=3)
         self.trans_v_mem = self.get_network(self_type='v_mem', layers=3)
        
-        # Projection layers
+        # Projection Layers
         self.proj1 = nn.Linear(combined_dim, combined_dim)
         self.proj2 = nn.Linear(combined_dim, combined_dim)
         self.out_layer = nn.Linear(combined_dim, output_dim)
