@@ -86,7 +86,6 @@ class TransformerEncoder(nn.Module):
 
         if self.normalize:
             x = self.layer_norm(x)
-
         return x
 
     def max_positions(self):

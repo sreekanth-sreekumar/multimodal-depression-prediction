@@ -11,6 +11,7 @@ glove = {}
 
 def load_glove_embeddings():
     # Getting Pretrained GLOVE Vectors
+    print('Loading glove embeddings into a dictionary ...')
     with open('glove.6B.50d.txt', 'r', encoding="utf8") as f:
         for l in f:
             line = l.split(' ')
@@ -20,7 +21,7 @@ def load_glove_embeddings():
 
 def get_glove_features(id):
     # Reading Utterance From Transcript File for Given ID
-    utterances = np.array([])
+    utterances = []
 
     with open('./data/' + id + '_TRANSCRIPT.csv') as file:
         csv_reader = csv.reader(file)
@@ -47,20 +48,19 @@ def get_glove_features(id):
 
                 #Append a Period to End of New Line
                 new_line.append(glove['.'])
-
                 #Append to List of Utterances
-                utterances = np.append(utterances, new_line)
-    return utterances
+                utterances.extend(new_line)
+    return np.array(utterances)
 
 def read_text_file(file_name):
-    features = np.array([])
+    features = []
     with open(file_name) as file:
         lines = file.readlines()[1:] #Skip First Row When Reading Line
         for line in lines:
             feature = line.split(',')[2:] #Skip First Two Columns In Line
-            if '-1.#IND' not in feature: #Include Feature Only If Not Indeterminate
-                features = np.append(features, [float(f) for f in feature])
-    return features
+            if ' -1.#IND' not in feature: #Include Feature Only If Not Indeterminate
+                features.append(np.array([float(f) for f in feature]))
+    return np.array(features)
 
 #Dataset for Representing Text
 class TextDataset():
@@ -69,16 +69,19 @@ class TextDataset():
         
         #Open Split File
         total_utterances = {}
+        print('Loading up text features ...')
         with open('./data/' + self.split + '_split.csv', 'r') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
             for row in csv_reader:
-                id = row[0]
-                utterances = get_glove_features(id) #Get Utterances for Given ID
-                total_utterances[id] = utterances
+                if row[0]:
+                    id = row[0]
+                    utterances = get_glove_features(id) #Get Utterances for Given ID
+                    total_utterances[id] = utterances
         self.save_linguistic_features(total_utterances)     
 
     def save_linguistic_features(self, feats):
+        print('Saving text features ...')
         with open('./saved_data/text_features_' + self.split + '.sav', 'wb') as f:
             joblib.dump(feats, f)
 
@@ -89,24 +92,26 @@ class AudioDataset():
         total_audio = {}
 
         # Open Split File
+        print('Loading up audio features ...')
         with open('./data/' + self.split + '_split.csv', 'r') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
             for row in csv_reader:
-                id = row[0]
-
-                # Reading Audio Features
-                covarep = np.array([])
-                with open('./data/' + id + '_COVAREP.csv') as file:
-                    csv_reader = csv.reader(file)
-                    for row in csv_reader:
-                        if int(row[1]):
-                           covarep = np.append(covarep, [float(f) for f in row[2:]])
-
-                total_audio[id] = covarep
+                if row[0]:
+                    id = row[0]
+                    # Reading Audio Features
+                    covarep = []
+                    with open('./data/' + id + '_COVAREP.csv') as file:
+                        csv_reader = csv.reader(file)
+                        for row in csv_reader:
+                            if int(row[1]):
+                                audio_features = np.array([float(f) for f in row[2:]])
+                                covarep.append(audio_features)
+                    total_audio[id] = np.array(covarep)
         self.save_audio_features(total_audio)
 
     def save_audio_features(self, feats):
+        print('Saving audio features ...')
         with open('./saved_data/audio_features_' + self.split + '.sav', 'wb') as f:
             joblib.dump(feats, f)
 
@@ -118,19 +123,22 @@ class VideoDataset():
         total_video = {}
 
         #Open Split File
+        print('Loading up video features ...')
         with open('./data/' + self.split + '_split.csv', 'r') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
             for row in csv_reader:
-                id = row[0]
-                # Reading Action units, pose and gaze features
-                au = read_text_file('./data/' + id + '_CLNF_AUs.txt')
-                gaze = read_text_file('./data/' + id + '_CLNF_gaze.txt')
-                pose = read_text_file('./data/' + id + '_CLNF_pose.txt')
+                if row[0]:
+                    id = row[0]
+                    # Reading Action units, pose and gaze features
+                    au = read_text_file('./data/' + id + '_CLNF_AUs.txt')
+                    gaze = read_text_file('./data/' + id + '_CLNF_gaze.txt')
+                    pose = read_text_file('./data/' + id + '_CLNF_pose.txt')
 
-                total_video[id] = {'au': au, 'gaze': gaze, 'pose': pose}
+                    total_video[id] = {'au': au, 'gaze': gaze, 'pose': pose}
         self.save_video_features(total_video)
       
     def save_video_features(self, feats):
+        print('Saving video features ...')
         with open('./saved_data/video_features_' + self.split + '.sav', 'wb') as f:
             joblib.dump(feats, f)

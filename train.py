@@ -4,8 +4,10 @@ from modules.dataset import MultDataset
 from torch.utils.data import DataLoader
 from modules.model import MULTModel
 import datetime
+import torch.nn as nn
 from torch.optim import Adam
-from torch.nn import CrossEntropyLoss
+from torch.nn import L1Loss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def mask_attn(actual_num_tokens, max_length_token, device):
     masks = []
@@ -65,32 +67,34 @@ patience = 20
 
 args = parser.parse_args()
 
-use_cuda = torch.cuda.is_available()
-
-hyp_params = args
-hyp_params.layers = args.nlevels
-hyp_params.use_cuda = use_cuda
-hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_data), len(valid_data), len(test_data)
-hyp_params.model = str.upper(args.model.strip())
-hyp_params.output_dim = 1
-hyp_params.criterion = ''
-
-model = MULTModel(hyp_params)
-optimizer = Adam(model.parameters(), lr=0.001)
-criterion = L1LOSS()
-scheduler = ReduceLROnPlateau(optimizer, mode='min', patience = args.when, factor=0.1, verbose=True)
-
-# Initialising device
-device = torch.device('cuda' if torch.cuda_is_available() else 'cpu')
-
 # Getting each dataset
 train_dataset = MultDataset('train')
 test_dataset = MultDataset('test')
 dev_dataset = MultDataset('dev')
 
+hyp_params = args
+hyp_params.layers = args.nlevels
+hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_dataset), len(dev_dataset), len(test_dataset)
+hyp_params.output_dim = 1
+hyp_params.criterion = ''
+
+hyp_params.orig_d_a, hyp_params.orig_d_v, hyp_params.orig_d_l = train_dataset.get_dim()
+
+model = MULTModel(hyp_params)
+optimizer = Adam(model.parameters(), lr=0.001)
+criterion = L1Loss()
+scheduler = ReduceLROnPlateau(optimizer, mode='min', patience = args.when, factor=0.1, verbose=True)
+
+use_cuda = True if torch.cuda.is_available() else False
+
+# Initialising device
+print('cuda') if torch.cuda.is_available() else print('cpu')
+device = torch.device('cuda' if use_cuda else 'cpu')
+model.to(device)
+
 load_params = {
-    'batch_size': 32,
-    collate_fn: MultDataset.get_collate_fn(device)
+    'batch_size': 3,
+    'collate_fn': MultDataset.get_collate_fn(device)
 }
 patience_counter = 0
 
@@ -123,6 +127,6 @@ if __name__ == '__main__':
             audio_mask = mask_attn(audio_length, audio.shape[1], device)
             video_mask = mask_attn(video_length, video.shape[1], device)
 
-            out = model(audio, video, text, text_mask, audio_mask, video_mask)
+            model(text, audio, video, text_mask, audio_mask, video_mask)
 
     

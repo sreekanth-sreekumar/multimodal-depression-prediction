@@ -1,9 +1,11 @@
+
 import math
 
 import torch
 import torch.nn as nn
 
 # Code adapted from the fairseq repo.
+
 def make_positions(tensor, padding_idx, left_pad):
     """Replace non-padding symbols with their position numbers.
     Position numbers begin at padding_idx+1.
