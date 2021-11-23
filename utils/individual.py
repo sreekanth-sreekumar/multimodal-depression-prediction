@@ -56,10 +56,14 @@ def read_text_file(file_name):
     features = []
     with open(file_name) as file:
         lines = file.readlines()[1:] #Skip First Row When Reading Line
+        row_count = 0
         for line in lines:
             feature = line.split(',')[2:] #Skip First Two Columns In Line
-            if ' -1.#IND' not in feature: #Include Feature Only If Not Indeterminate
+            # Include features only if they aren't indeterminate and has sucess=1
+            # Also subsample by 0.3s
+            if ' -1.#IND' not in feature and int(feature[1]) and row_count%3 == 0:
                 features.append(np.array([float(f) for f in feature]))
+            row_count += 1
     return np.array(features)
 
 #Dataset for Representing Text
@@ -104,10 +108,16 @@ class AudioDataset():
                     with open('./data/' + id + '_COVAREP.csv') as file:
                         csv_reader = csv.reader(file)
                         for row in csv_reader:
+                            # Skipping lines with VAV = 0
                             if int(row[1]):
-                                audio_features = np.array([float(f) for f in row[2:]])
+                                audio_features = np.array([float(f) for f in row[:1] + row[2:]])
                                 covarep.append(audio_features)
-                    total_audio[id] = np.array(covarep)
+                            
+                    covarep = np.array(covarep)
+                    # Subsampling by 4
+                    cov_range = np.arange(covarep.shape[0])
+                    covarep = covarep[cov_range%4 == 0]
+                    total_audio[id] = covarep
         self.save_audio_features(total_audio)
 
     def save_audio_features(self, feats):

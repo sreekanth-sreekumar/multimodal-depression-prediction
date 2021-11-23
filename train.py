@@ -2,12 +2,12 @@ import torch
 import argparse
 from modules.dataset import MultDataset
 from torch.utils.data import DataLoader
-from modules.model import MULTModel
+# from modules.model import MULTModel
 import datetime
 import torch.nn as nn
-from torch.optim import Adam
-from torch.nn import L1Loss
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+# from torch.optim import Adam
+# from torch.nn import L1Loss
+# from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 def mask_attn(actual_num_tokens, max_length_token, device):
     masks = []
@@ -62,7 +62,7 @@ parser.add_argument('--log_interval', type=int, default=30,
 parser.add_argument('--seed', type=int, default=42,
                     help='random seed')
 
-number_of_epochs = 50
+number_of_epochs = 1
 patience = 20
 
 args = parser.parse_args()
@@ -80,20 +80,20 @@ hyp_params.criterion = ''
 
 hyp_params.orig_d_a, hyp_params.orig_d_v, hyp_params.orig_d_l = train_dataset.get_dim()
 
-model = MULTModel(hyp_params)
-optimizer = Adam(model.parameters(), lr=0.001)
-criterion = L1Loss()
-scheduler = ReduceLROnPlateau(optimizer, mode='min', patience = args.when, factor=0.1, verbose=True)
+# model = MULTModel(hyp_params)
+# optimizer = Adam(model.parameters(), lr=0.001)
+# criterion = L1Loss()
+# scheduler = ReduceLROnPlateau(optimizer, mode='min', patience = args.when, factor=0.1, verbose=True)
 
 use_cuda = True if torch.cuda.is_available() else False
 
 # Initialising device
 print('cuda') if torch.cuda.is_available() else print('cpu')
 device = torch.device('cuda' if use_cuda else 'cpu')
-model.to(device)
+# model.to(device)
 
 load_params = {
-    'batch_size': 3,
+    'batch_size': 16,
     'collate_fn': MultDataset.get_collate_fn(device)
 }
 patience_counter = 0
@@ -109,12 +109,12 @@ if __name__ == '__main__':
         train_loader = DataLoader(train_dataset, shuffle=True, **load_params)
         val_loader = DataLoader(dev_dataset, shuffle=True, **load_params)
 
-        losses = []
-        model.train()
-        torch.enable_grad()
-
+        # losses = []
+        # model.train()
+        # torch.enable_grad()
+        print(epoch)
         for i, data in enumerate(train_loader):
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
 
             audio = data['audio']
             audio_length = data['audio_length']
@@ -123,10 +123,14 @@ if __name__ == '__main__':
             text = data['text']
             text_length = data['text_length']
 
-            text_mask = mask_attn(text_length, text.shape[1], device)
-            audio_mask = mask_attn(audio_length, audio.shape[1], device)
-            video_mask = mask_attn(video_length, video.shape[1], device)
+            print('Text', text.size())
+            print('Video', video.size())
+            print('Audio', audio.size())
 
-            model(text, audio, video, text_mask, audio_mask, video_mask)
+            # text_mask = mask_attn(text_length, text.shape[1], device)
+            # audio_mask = mask_attn(audio_length, audio.shape[1], device)
+            # video_mask = mask_attn(video_length, video.shape[1], device)
+
+            # model(text, audio, video, text_mask, audio_mask, video_mask)
 
     
