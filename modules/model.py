@@ -16,6 +16,7 @@ class MULTModel(nn.Module):
             self.relu_dropout = hyp_params.relu_dropout
             self.res_dropout = hyp_params.res_dropout
             self.out_dropout = hyp_params.out_dropout
+            self.relu = nn.ReLU()
             self.embed_dropout = nn.Dropout(p=hyp_params.embed_dropout)
             self.attn_mask = hyp_params.attn_mask
 
@@ -73,7 +74,8 @@ class MULTModel(nn.Module):
                                     embed_dropout=self.embed_dropout,
                                     attn_mask=self.attn_mask)
     
-        def forward(self, x_l, x_a, x_v, mask_l, mask_a, mask_v):
+        def forward(self, x_l, x_a, x_v, mask_l, mask_a, mask_v, device):
+
             x_l = self.embed_dropout(x_l.transpose(1,2))
             x_a = x_a.transpose(1,2)
             x_v = x_v.transpose(1,2)
@@ -87,35 +89,35 @@ class MULTModel(nn.Module):
             proj_x_l = proj_x_l.permute(2, 0, 1)
 
             # (V,A) --> L
-            h_l_with_as = self.trans_l_with_a(proj_x_l, proj_x_a, proj_x_a, mask_a)    # Dimension (L, N, d_l)
-            h_l_with_vs = self.trans_l_with_v(proj_x_l, proj_x_v, proj_x_v, mask_v)    # Dimension (L, N, d_l)
+            h_l_with_as = self.trans_l_with_a(device, proj_x_l, proj_x_a, proj_x_a, mask_a)    # Dimension (L, N, d_l)
+            h_l_with_vs = self.trans_l_with_v(device, proj_x_l, proj_x_v, proj_x_v, mask_v)    # Dimension (L, N, d_l)
             h_ls = torch.cat([h_l_with_as, h_l_with_vs], dim=2)
-            h_ls = self.trans_l_mem(h_ls, mask_l)
+            h_ls = self.trans_l_mem(device, x_in=h_ls, src_key_padding_mask=mask_l)
             if type(h_ls) == tuple:
                 h_ls = h_ls[0]
             last_h_l = last_hs = h_ls[-1]   # Take the last output for prediction
 
             # (L,V) --> A
-            h_a_with_ls = self.trans_a_with_l(proj_x_a, proj_x_l, proj_x_l, mask_l)
-            h_a_with_vs = self.trans_a_with_v(proj_x_a, proj_x_v, proj_x_v, mask_v)
+            h_a_with_ls = self.trans_a_with_l(device, proj_x_a, proj_x_l, proj_x_l, mask_l)
+            h_a_with_vs = self.trans_a_with_v(device, proj_x_a, proj_x_v, proj_x_v, mask_v)
             h_as = torch.cat([h_a_with_ls, h_a_with_vs], dim=2)
-            h_as = self.trans_a_mem(h_as, mask_a)
+            h_as = self.trans_a_mem(device, x_in=h_as, src_key_padding_mask=mask_a)
             if type(h_as) == tuple:
                 h_as = h_as[0]
             last_h_a = last_hs = h_as[-1]
 
             # (L,A) --> V
-            h_v_with_ls = self.trans_v_with_l(proj_x_v, proj_x_l, proj_x_l, mask_l)
-            h_v_with_as = self.trans_v_with_a(proj_x_v, proj_x_a, proj_x_a, mask_a)
+            h_v_with_ls = self.trans_v_with_l(device, proj_x_v, proj_x_l, proj_x_l, mask_l)
+            h_v_with_as = self.trans_v_with_a(device, proj_x_v, proj_x_a, proj_x_a, mask_a)
             h_vs = torch.cat([h_v_with_ls, h_v_with_as], dim=2)
-            h_vs = self.trans_v_mem(h_vs, mask_v)
+            h_vs = self.trans_v_mem(device, x_in=h_vs, src_key_padding_mask=mask_v)
             if type(h_vs) == tuple:
                 h_vs = h_vs[0]
             last_h_v = last_hs = h_vs[-1]
 
             last_hs = torch.cat([last_h_l, last_h_a, last_h_v], dim=1)
 
-            last_hs_proj = self.proj2(F.dropout(F.relu(self.proj1(last_hs)), p=self.out_dropout, training=self.training))
+            last_hs_proj = self.proj2(self.out_dropout(self.relu(self.proj1(last_hs))))
             last_hs_proj += last_hs
 
             output = self.out_layer(last_hs_proj)

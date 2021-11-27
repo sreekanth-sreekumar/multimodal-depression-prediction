@@ -1,4 +1,5 @@
 import torch
+torch.cuda.set_per_process_memory_fraction(1.0, 0)
 import argparse
 from modules.dataset import MultDataset
 from torch.utils.data import DataLoader
@@ -10,6 +11,7 @@ from torch.nn import CrossEntropyLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import numpy as np
 import os
+from torch import autocast
 
 def mask_attn(actual_num_tokens, max_length_token, device):
     masks = []
@@ -59,8 +61,6 @@ parser.add_argument('--nlevels', type=int, default=5,
                     help='number of layers in the network (default: 5)')
 parser.add_argument('--num_heads', type=int, default=5,
                     help='number of heads for the transformer network (default: 5)')
-parser.add_argument('--attn_mask', action='store_false',
-                    help='use attention mask for Transformer (default: true)')
 
 # Tuning
 parser.add_argument('--batch_size', type=int, default=24, metavar='N',
@@ -87,6 +87,8 @@ patience = 20
 
 args = parser.parse_args()
 
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:3000'
+
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
@@ -99,6 +101,7 @@ hyp_params = args
 hyp_params.layers = args.nlevels
 hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_dataset), len(dev_dataset), len(test_dataset)
 hyp_params.output_dim = 1
+hyp_params.attn_mask = False
 
 hyp_params.orig_d_a, hyp_params.orig_d_v, hyp_params.orig_d_l = train_dataset.get_dim()
 
@@ -120,7 +123,7 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 model.to(device)
 
 load_params = {
-    'batch_size': 8,
+    'batch_size': 4,
     'collate_fn': MultDataset.get_collate_fn(device)
 }
 
@@ -165,12 +168,16 @@ if __name__ == '__main__':
 
             target = data['binary']
 
+            print(audio.size())
+            print(video.size())
+            print(text.size())
+
             text_mask = mask_attn(text_length, text.shape[1], device)
             audio_mask = mask_attn(audio_length, audio.shape[1], device)
             video_mask = mask_attn(video_length, video.shape[1], device)
-
-            out = model(text, audio, video, text_mask, audio_mask, video_mask)
-            loss = criterion(out, target)
+            with autocast(device_type='cuda'):
+                out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
+                loss = criterion(out, target)
             losses.append(loss.item())
             loss.backward()
 
@@ -198,7 +205,7 @@ if __name__ == '__main__':
                 audio_mask = mask_attn(audio_length, audio.shape[1], device)
                 video_mask = mask_attn(video_length, video.shape[1], device)
 
-                out = model(text, audio, video, text_mask, audio_mask, video_mask)
+                out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
                 correct = torch.eq(out, target)
                 accuracies.append(float(correct))
             

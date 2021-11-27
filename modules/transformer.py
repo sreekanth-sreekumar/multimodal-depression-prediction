@@ -41,12 +41,11 @@ class TransformerEncoderLayer(nn.Module):
         self.layer_norm = nn.LayerNorm(embed_dim)
         
     def forward(self, x, x_k=None, x_v=None, src_key_padding_mask=None):
-
         residual = x
         x = self.layer_norm(x)
         mask = buffered_future_mask(x, x_k) if self.attn_mask else None
-
-        if x_k in None and x_v is None:
+        torch.cuda.empty_cache()
+        if x_k is None and x_v is None:
             x, _ = self.self_attn(query=x, key=x, value=x, key_padding_mask=src_key_padding_mask, attn_mask=mask)
         else:
             x_k = self.layer_norm(x_k)
@@ -89,16 +88,16 @@ class TransformerEncoder(nn.Module):
 
         self.layer_norm = nn.LayerNorm(embed_dim)
     
-    def forward(self, x_in, x_in_k = None, x_in_v = None, src_key_padding_mask = None):
+    def forward(self, device, x_in, x_in_k=None, x_in_v=None, src_key_padding_mask=None):
         x = self.embed_scale * x_in
-        x += self.positional_embedding(x_in.transpose(0,1)[:, :, 0].transpose(0,1))
+        x += self.positional_embedding(x_in.transpose(0,1)[:, :, 0].transpose(0,1), device)
         x = self.dropout(x)
 
         if x_in_k is not None and x_in_v is not None:
             x_k = self.embed_scale * x_in_k
             x_v = self.embed_scale * x_in_v
-            x_k += self.positional_embedding(x_in_k.transpose(0,1)[:, :, 0].transpose(0,1))
-            x_v += self.positional_embedding(x_in_v.transpose(0,1)[:, :, 0].transpose(0,1))
+            x_k += self.positional_embedding(x_in_k.transpose(0,1)[:, :, 0].transpose(0,1), device)
+            x_v += self.positional_embedding(x_in_v.transpose(0,1)[:, :, 0].transpose(0,1), device)
             x_k = self.dropout(x_k)
             x_v = self.dropout(x_v)
 

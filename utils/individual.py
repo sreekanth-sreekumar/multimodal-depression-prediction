@@ -61,10 +61,14 @@ def read_text_file(file_name):
             feature = line.split(',')[2:] #Skip First Two Columns In Line
             # Include features only if they aren't indeterminate and has sucess=1
             # Also subsample by 0.3s
-            if ' -1.#IND' not in feature and int(feature[1]) and row_count%3 == 0:
+            if ' -1.#IND' not in feature and int(feature[1]):
                 features.append(np.array([float(f) for f in feature]))
-            row_count += 1
-    return np.array(features)
+
+    features = np.array(features)
+    # Subsampling by 4
+    feat_range = np.arange(features.shape[0])
+    features = features[feat_range%18 == 0]
+    return features
 
 #Dataset for Representing Text
 class TextDataset():
@@ -118,7 +122,7 @@ class AudioDataset():
                     covarep = np.array(covarep)
                     # Subsampling by 4
                     cov_range = np.arange(covarep.shape[0])
-                    covarep = covarep[cov_range%4 == 0]
+                    covarep = covarep[cov_range%20 == 0]
                     total_audio[id] = covarep
         self.save_audio_features(total_audio)
 

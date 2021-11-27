@@ -108,7 +108,7 @@ class MultDataset(Dataset):
                     batch[key].append(padded)
 
             for key in ['audio', 'video', 'text']:
-                    batch[key] = torch.stack(batch[key]).to(device)
+                    batch[key] = torch.stack(batch[key]).to(device, dtype=torch.float16)
 
             return batch
 
