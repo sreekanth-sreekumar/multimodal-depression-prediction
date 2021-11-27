@@ -8,18 +8,16 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.nn import CrossEntropyLoss
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+import numpy as np
+import os
 
 def mask_attn(actual_num_tokens, max_length_token, device):
     masks = []
     for m in range(len(actual_num_tokens)):
         mask = [0] * actual_num_tokens[m] + [1] * (max_length_token - actual_num_tokens[m])
         masks.append(mask)
-    masks = torch.tensor(masks).unsqueeze(2).to(device)
+    masks = torch.tensor(masks).to(device)
     return masks
-
-seed = 3
-torch.manual_seed(seed)
-np.random.seed(seed)
 
 if not os.path.isdir('./saved_models'):
     os.mkdir('./saved_models')
@@ -81,11 +79,16 @@ parser.add_argument('--log_interval', type=int, default=30,
                     help='frequency of result logging (default: 30)')
 parser.add_argument('--seed', type=int, default=42,
                     help='random seed')
+parser.add_argument('--load_file', action='store_true',
+                    help='use a existing model file')
 
 number_of_epochs = 5
 patience = 20
 
 args = parser.parse_args()
+
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
 
 # Getting each dataset
 train_dataset = MultDataset('train')
@@ -99,11 +102,6 @@ hyp_params.output_dim = 1
 
 hyp_params.orig_d_a, hyp_params.orig_d_v, hyp_params.orig_d_l = train_dataset.get_dim()
 
-load_params = {
-    'batch_size': 8,
-    'collate_fn': MultDataset.get_collate_fn(device)
-}
-
 patience_counter = 0
 best_epoch = -1
 best_accuracy = -1
@@ -114,10 +112,17 @@ optimizer = Adam(model.parameters(), lr=0.001)
 criterion = CrossEntropyLoss()
 scheduler = ReduceLROnPlateau(optimizer, mode='min', patience = args.when, factor=0.1, verbose=True)
 
+use_cuda = True if torch.cuda.is_available() else False
+
 # Initialising device
 print('cuda') if use_cuda else print('cpu')
 device = torch.device('cuda' if use_cuda else 'cpu')
 model.to(device)
+
+load_params = {
+    'batch_size': 8,
+    'collate_fn': MultDataset.get_collate_fn(device)
+}
 
 if args.load_file:
     file_name = './saved_models/model_' + str(seed) + '_' + '5.pkl' #Replace with appropriate epoch number later
@@ -127,7 +132,7 @@ if args.load_file:
     optimizer_sd = checkpoint['model_optimiser']
     epoch_sd = best_epoch = checkpoint['epoch']
     model.load_state_dict(model_sd)
-    optimizer.load_state_dict(model_optim_sd)
+    optimizer.load_state_dict(optimizer_sd)
 
 use_cuda = True if torch.cuda.is_available() else False
 
@@ -177,7 +182,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             model.eval()
             accuracies = []
-            for i, data in enumerate(dev_loader):
+            for i, data in enumerate(val_loader):
                 audio = data['audio']
                 audio_length = data['audio_length']
                 
@@ -202,7 +207,7 @@ if __name__ == '__main__':
 
             print('Accuracy for epoch: ', epoch, " is ",  round(cur_acc, 5))
 
-            if best_accuracy >= current_accuracy:
+            if best_accuracy >= cur_acc:
                 patience_counter +=1
                 if (patience == patience_counter):
                     duration = datetime.datetime.now() - t
@@ -210,7 +215,7 @@ if __name__ == '__main__':
                     break
             else:
                 patience_counter = 0
-                best_accuracy = current_accuracy
+                best_accuracy = cur_acc
                 best_epoch = epoch
                 save_model(epoch, best_accuracy, model, optimizer, best_accuracy, seed)
             

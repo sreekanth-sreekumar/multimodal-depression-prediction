@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from modules.transformer import TransformerEncoder
 
 class MULTModel(nn.Module):
         def __init__(self, hyp_params):
@@ -40,36 +41,38 @@ class MULTModel(nn.Module):
             self.trans_a_mem = self.get_network(self_type='a_mem', layers=3)
             self.trans_v_mem = self.get_network(self_type='v_mem', layers=3)
 
+            output_dim = hyp_params.output_dim
+
             # Projection layers
             self.proj1 = nn.Linear(combined_dim, combined_dim)
             self.proj2 = nn.Linear(combined_dim, combined_dim)
             self.out_layer = nn.Linear(combined_dim, output_dim)
 
-            def get_network(self, self_type='l', layers=-1):
-                if self_type in ['l', 'al', 'vl']:
-                    embed_dim, attn_dropout = self.d_l, self.attn_dropout
-                elif self_type in ['a', 'la', 'va']:
-                    embed_dim, attn_dropout = self.d_a, self.attn_dropout_a
-                elif self_type in ['v', 'lv', 'av']:
-                    embed_dim, attn_dropout = self.d_v, self.attn_dropout_v
-                elif self_type == 'l_mem':
-                    embed_dim, attn_dropout = 2*self.d_l, self.attn_dropout
-                elif self_type == 'a_mem':
-                    embed_dim, attn_dropout = 2*self.d_a, self.attn_dropout
-                elif self_type == 'v_mem':
-                    embed_dim, attn_dropout = 2*self.d_v, self.attn_dropout
-                else:
-                    raise ValueError("Unknown network type")
-                
-                return TransformerEncoder(embed_dim=embed_dim,
-                                        num_heads=self.num_heads,
-                                        layers=max(self.layers, layers),
-                                        attn_dropout=attn_dropout,
-                                        relu_dropout=self.relu_dropout,
-                                        res_dropout=self.res_dropout,
-                                        embed_dropout=self.embed_dropout,
-                                        attn_mask=self.attn_mask)
-        
+        def get_network(self, self_type='l', layers=-1):
+            if self_type in ['l', 'al', 'vl']:
+                embed_dim, attn_dropout = self.d_l, self.attn_dropout
+            elif self_type in ['a', 'la', 'va']:
+                embed_dim, attn_dropout = self.d_a, self.attn_dropout_a
+            elif self_type in ['v', 'lv', 'av']:
+                embed_dim, attn_dropout = self.d_v, self.attn_dropout_v
+            elif self_type == 'l_mem':
+                embed_dim, attn_dropout = 2*self.d_l, self.attn_dropout
+            elif self_type == 'a_mem':
+                embed_dim, attn_dropout = 2*self.d_a, self.attn_dropout
+            elif self_type == 'v_mem':
+                embed_dim, attn_dropout = 2*self.d_v, self.attn_dropout
+            else:
+                raise ValueError("Unknown network type")
+            
+            return TransformerEncoder(embed_dim=embed_dim,
+                                    num_heads=self.num_heads,
+                                    layers=max(self.layers, layers),
+                                    attn_dropout=attn_dropout,
+                                    relu_dropout=self.relu_dropout,
+                                    res_dropout=self.res_dropout,
+                                    embed_dropout=self.embed_dropout,
+                                    attn_mask=self.attn_mask)
+    
         def forward(self, x_l, x_a, x_v, mask_l, mask_a, mask_v):
             x_l = self.embed_dropout(x_l.transpose(1,2))
             x_a = x_a.transpose(1,2)

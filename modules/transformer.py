@@ -7,7 +7,7 @@ def fill_with_neg_inf(t):
     """FP16-compatible function that fills a tensor with -inf."""
     return t.float().fill_(float('-inf')).type_as(t)
 
-def buffered_future_mask(tensor1, tesnsor2, device):
+def buffered_future_mask(tensor1, tensor2, device):
     dim1 = dim2 = tensor1.size()
     if tensor2 is not None:
         dim2 = tensor2.size()
@@ -20,10 +20,14 @@ class TransformerEncoderLayer(nn.Module):
     def __init__(self, embed_dim, num_heads=4, attn_dropout=0.1, relu_dropout=0.1,
                 res_dropout=0.1, attn_mask=False):
         super().__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.attn_dropout = attn_dropout
+
         self.self_attn = nn.MultiheadAttention(
             embed_dim=self.embed_dim,
             num_heads=self.num_heads,
-            dropout=attn_dropout
+            dropout=self.attn_dropout
         )
 
         self.attn_mask = attn_mask
@@ -32,12 +36,13 @@ class TransformerEncoderLayer(nn.Module):
         self.res_dropout = nn.Dropout(p=res_dropout)
         self.relu = nn.ReLU()
 
-        self.fc1 = Linear(self.embed_dim, 4*self.embed_dim)
-        self.fc2 = Linear(4*self.embed_dim, self.embed_dim)
+        self.fc1 = nn.Linear(self.embed_dim, 4*self.embed_dim)
+        self.fc2 = nn.Linear(4*self.embed_dim, self.embed_dim)
         self.layer_norm = nn.LayerNorm(embed_dim)
         
-    def forward(self, x_k=None, x_v=None, src_key_padding_mask=None):
+    def forward(self, x, x_k=None, x_v=None, src_key_padding_mask=None):
 
+        residual = x
         x = self.layer_norm(x)
         mask = buffered_future_mask(x, x_k) if self.attn_mask else None
 
@@ -61,9 +66,9 @@ class TransformerEncoderLayer(nn.Module):
 
 class TransformerEncoder(nn.Module):
     def __init__(self, embed_dim, num_heads, layers, attn_dropout=0.0, 
-                relu_dropout=0.0, res_dropout=0.0, attn_mask=False):
+                relu_dropout=0.0, res_dropout=0.0, embed_dropout=0.0, attn_mask=False):
         super().__init__()
-        self.dropout = nn.Dropout(p = embed_dropout)      # Embedding dropout
+        self.dropout = embed_dropout      # Embedding dropout
         self.attn_dropout = attn_dropout
         self.embed_dim = embed_dim
         self.embed_scale = math.sqrt(embed_dim)

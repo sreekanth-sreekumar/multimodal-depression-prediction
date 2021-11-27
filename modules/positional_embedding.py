@@ -1,11 +1,15 @@
+import torch
+import torch.nn as nn
+import math
+
 class PositonalEmbedding(nn.Module):
     def __init__(self, embed_dim):
         super().__init__()
         self.embedding_dim = embed_dim
 
     def forward(self, input):
-
-        max_pos = seq_len
+        _, seq_len = input.size()
+        max_pos = seq_len + 1
         half_dim = self.embedding_dim // 2
         emb = math.log(10000) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)

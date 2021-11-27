@@ -80,6 +80,7 @@ class TextDataset():
             for row in csv_reader:
                 if row[0]:
                     id = row[0]
+                    print(id)
                     utterances = get_glove_features(id) #Get Utterances for Given ID
                     total_utterances[id] = utterances
         self.save_linguistic_features(total_utterances)     
@@ -105,9 +106,10 @@ class AudioDataset():
                     id = row[0]
                     # Reading Audio Features
                     covarep = []
+                    print(id)
                     with open('./data/' + id + '_COVAREP.csv') as file:
-                        csv_reader = csv.reader(file)
-                        for row in csv_reader:
+                        cv_reader = csv.reader(file)
+                        for row in cv_reader:
                             # Skipping lines with VAV = 0
                             if int(row[1]):
                                 audio_features = np.array([float(f) for f in row[:1] + row[2:]])
@@ -140,6 +142,7 @@ class VideoDataset():
             for row in csv_reader:
                 if row[0]:
                     id = row[0]
+                    print(id)
                     # Reading Action units, pose and gaze features
                     au = read_text_file('./data/' + id + '_CLNF_AUs.txt')
                     gaze = read_text_file('./data/' + id + '_CLNF_gaze.txt')
