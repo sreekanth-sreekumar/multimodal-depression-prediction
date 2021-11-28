@@ -16,7 +16,7 @@ def load_glove_embeddings():
         for l in f:
             line = l.split(' ')
             word = line[0]
-            vector = np.asarray(line[1:], dtype='float32')
+            vector = np.asarray(line[1:], dtype='float16')
             glove[word] = vector
 
 def get_glove_features(id):
@@ -67,7 +67,7 @@ def read_text_file(file_name):
     features = np.array(features)
     # Subsampling by 4
     feat_range = np.arange(features.shape[0])
-    features = features[feat_range%18 == 0]
+    features = features[feat_range%21 == 0]
     return features
 
 #Dataset for Representing Text
@@ -84,7 +84,6 @@ class TextDataset():
             for row in csv_reader:
                 if row[0]:
                     id = row[0]
-                    print(id)
                     utterances = get_glove_features(id) #Get Utterances for Given ID
                     total_utterances[id] = utterances
         self.save_linguistic_features(total_utterances)     
@@ -110,7 +109,6 @@ class AudioDataset():
                     id = row[0]
                     # Reading Audio Features
                     covarep = []
-                    print(id)
                     with open('./data/' + id + '_COVAREP.csv') as file:
                         cv_reader = csv.reader(file)
                         for row in cv_reader:
@@ -122,7 +120,7 @@ class AudioDataset():
                     covarep = np.array(covarep)
                     # Subsampling by 4
                     cov_range = np.arange(covarep.shape[0])
-                    covarep = covarep[cov_range%20 == 0]
+                    covarep = covarep[cov_range%24 == 0]
                     total_audio[id] = covarep
         self.save_audio_features(total_audio)
 
@@ -146,7 +144,6 @@ class VideoDataset():
             for row in csv_reader:
                 if row[0]:
                     id = row[0]
-                    print(id)
                     # Reading Action units, pose and gaze features
                     au = read_text_file('./data/' + id + '_CLNF_AUs.txt')
                     gaze = read_text_file('./data/' + id + '_CLNF_gaze.txt')

@@ -44,7 +44,6 @@ class TransformerEncoderLayer(nn.Module):
         residual = x
         x = self.layer_norm(x)
         mask = buffered_future_mask(x, x_k) if self.attn_mask else None
-        torch.cuda.empty_cache()
         if x_k is None and x_v is None:
             x, _ = self.self_attn(query=x, key=x, value=x, key_padding_mask=src_key_padding_mask, attn_mask=mask)
         else:

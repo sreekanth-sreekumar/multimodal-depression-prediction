@@ -15,5 +15,4 @@ class PositonalEmbedding(nn.Module):
         emb = torch.exp(torch.arange(half_dim, dtype=torch.float) * -emb)
         emb = torch.arange(max_pos, dtype=torch.float).unsqueeze(1) * emb.unsqueeze(0)
         emb = torch.cat([torch.sin(emb), torch.cos(emb)], dim=1).view(max_pos, -1)
-        print(emb.size())
         return emb.to(device)

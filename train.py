@@ -1,5 +1,4 @@
 import torch
-torch.cuda.set_per_process_memory_fraction(1.0, 0)
 import argparse
 from modules.dataset import MultDataset
 from torch.utils.data import DataLoader
@@ -87,8 +86,6 @@ patience = 20
 
 args = parser.parse_args()
 
-os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:3000'
-
 torch.manual_seed(args.seed)
 np.random.seed(args.seed)
 
@@ -123,7 +120,7 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 model.to(device)
 
 load_params = {
-    'batch_size': 4,
+    'batch_size': 1,
     'collate_fn': MultDataset.get_collate_fn(device)
 }
 
@@ -153,7 +150,6 @@ if __name__ == '__main__':
         losses = []
         model.train()
         torch.enable_grad()
-        print(epoch)
         for i, data in enumerate(train_loader):
             optimizer.zero_grad()
 
@@ -166,17 +162,14 @@ if __name__ == '__main__':
             text = data['text']
             text_length = data['text_length']
 
-            target = data['binary']
-
-            print(audio.size())
-            print(video.size())
-            print(text.size())
+            target = torch.tensor(data['binary'], dtype=torch.float).unsqueeze(1).to(device)
 
             text_mask = mask_attn(text_length, text.shape[1], device)
             audio_mask = mask_attn(audio_length, audio.shape[1], device)
             video_mask = mask_attn(video_length, video.shape[1], device)
             with autocast(device_type='cuda'):
                 out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
+                print(out.shape, target.shape)
                 loss = criterion(out, target)
             losses.append(loss.item())
             loss.backward()
@@ -206,7 +199,7 @@ if __name__ == '__main__':
                 video_mask = mask_attn(video_length, video.shape[1], device)
 
                 out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
-                correct = torch.eq(out, target)
+                correct = torch.eq(out, torch.Tensor(target))
                 accuracies.append(float(correct))
             
             sum_accuracy = np.sum(accuracies)

@@ -15,7 +15,7 @@ class MULTModel(nn.Module):
             self.attn_dropout_v = hyp_params.attn_dropout_v
             self.relu_dropout = hyp_params.relu_dropout
             self.res_dropout = hyp_params.res_dropout
-            self.out_dropout = hyp_params.out_dropout
+            self.out_dropout = nn.Dropout(p=hyp_params.out_dropout)
             self.relu = nn.ReLU()
             self.embed_dropout = nn.Dropout(p=hyp_params.embed_dropout)
             self.attn_mask = hyp_params.attn_mask

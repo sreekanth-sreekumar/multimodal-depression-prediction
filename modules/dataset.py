@@ -57,8 +57,8 @@ class MultDataset(Dataset):
                         'video_length': video_length,
                         'text': torch.from_numpy(text_features.astype(np.float32)),
                         'text_length': text_length,
-                        'binary': row[1],
-                        'severity': row[2],
+                        'binary': int(row[1]),
+                        'severity': int(row[2]),
                         'audio_dim': audio_features.shape[1],
                         'video_dim': video_concat_array.shape[1],
                         'text_dim':  text_features.shape[1] 
@@ -108,7 +108,7 @@ class MultDataset(Dataset):
                     batch[key].append(padded)
 
             for key in ['audio', 'video', 'text']:
-                    batch[key] = torch.stack(batch[key]).to(device, dtype=torch.float16)
+                    batch[key] = torch.stack(batch[key]).to(device)
 
             return batch
 
