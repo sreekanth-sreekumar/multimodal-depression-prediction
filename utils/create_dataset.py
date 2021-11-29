@@ -13,8 +13,6 @@ if (not os.path.exists('./saved_data')):
     os.mkdir('./saved_data')
 
 if __name__ == '__main__':
-    #Load Glove Embeddings
-    load_glove_embeddings()
 
     #URL and Token for Authentication
     DATABASE_URL = 'https://dcapswoz.ict.usc.edu/wwwdaicwoz/'

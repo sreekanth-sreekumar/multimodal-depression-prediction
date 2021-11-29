@@ -1,56 +1,26 @@
-import nltk
+from sentence_transformers import SentenceTransformer
 import csv
 import numpy as np
 import re
-from nltk.corpus import stopwords
 import joblib
 
-nltk.download('stopwords')
-stop = set(stopwords.words('english'))
-glove = {}
+model = SentenceTransformer('paraphrase-MiniLM-L6-v2', device='cuda')
 
-def load_glove_embeddings():
-    # Getting Pretrained GLOVE Vectors
-    print('Loading glove embeddings into a dictionary ...')
-    with open('glove.6B.50d.txt', 'r', encoding="utf8") as f:
-        for l in f:
-            line = l.split(' ')
-            word = line[0]
-            vector = np.asarray(line[1:], dtype='float16')
-            glove[word] = vector
-
-def get_glove_features(id):
-    # Reading Utterance From Transcript File for Given ID
-    utterances = []
-
+def get_setence_features(id):
+    # Getting sentence embedding
     with open('./data/' + id + '_TRANSCRIPT.csv') as file:
         csv_reader = csv.reader(file)
         next(csv_reader)
+        utterances = []
         for row in csv_reader:
           if row:
             row = row[0].split('\t')
             #Only Extract Utterances for Participant (Not Automated Agent)
             if row[2].lower() == 'participant':
-                line = row[3].lower()
-
-                #Stripping Punctuations
-                line_by_words = re.findall(r'(?:\w+)', line, flags=re.UNICODE)
-                new_line = []
-
-                #Getting Glove Vectors of the Words, Using Random Vector If Not Found
-                for word in line_by_words:
-                    if word not in stop:
-                        try:
-                            vector = glove[word]
-                        except KeyError: #Can't Find Word in Pretrained Vector Dictionary
-                            vector = np.random.normal(scale=0.6, size=(50, )) #Create Random Vector of Size 50
-                        new_line.append(vector)
-
-                #Append a Period to End of New Line
-                new_line.append(glove['.'])
-                #Append to List of Utterances
-                utterances.extend(new_line)
-    return np.array(utterances)
+                utterances.append(row[3])
+        embeddings = model.encode(utterances, convert_to_numpy=True)
+        return embeddings
+    
 
 def read_text_file(file_name):
     features = []
@@ -84,7 +54,7 @@ class TextDataset():
             for row in csv_reader:
                 if row[0]:
                     id = row[0]
-                    utterances = get_glove_features(id) #Get Utterances for Given ID
+                    utterances = get_setence_features(id) #Get Utterances for Given ID
                     total_utterances[id] = utterances
         self.save_linguistic_features(total_utterances)     
 

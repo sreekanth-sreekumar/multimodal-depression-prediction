@@ -120,7 +120,7 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 model.to(device)
 
 load_params = {
-    'batch_size': 1,
+    'batch_size': 8,
     'collate_fn': MultDataset.get_collate_fn(device)
 }
 
@@ -169,7 +169,6 @@ if __name__ == '__main__':
             video_mask = mask_attn(video_length, video.shape[1], device)
             with autocast(device_type='cuda'):
                 out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
-                print(out.shape, target.shape)
                 loss = criterion(out, target)
             losses.append(loss.item())
             loss.backward()
