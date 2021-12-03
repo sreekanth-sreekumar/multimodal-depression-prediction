@@ -59,6 +59,7 @@ class MultDataset(Dataset):
                         'text_length': text_length,
                         'binary': int(row[1]),
                         'severity': int(row[2]),
+                        'five_classification': int(row[2])//5,
                         'audio_dim': audio_features.shape[1],
                         'video_dim': video_concat_array.shape[1],
                         'text_dim':  text_features.shape[1] 

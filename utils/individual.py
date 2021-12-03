@@ -37,7 +37,7 @@ def read_text_file(file_name):
     features = np.array(features)
     # Subsampling by 4
     feat_range = np.arange(features.shape[0])
-    features = features[feat_range%21 == 0]
+    features = features[feat_range%9 == 0]
     return features
 
 #Dataset for Representing Text
@@ -90,7 +90,7 @@ class AudioDataset():
                     covarep = np.array(covarep)
                     # Subsampling by 4
                     cov_range = np.arange(covarep.shape[0])
-                    covarep = covarep[cov_range%24 == 0]
+                    covarep = covarep[cov_range%12 == 0]
                     total_audio[id] = covarep
         self.save_audio_features(total_audio)
 

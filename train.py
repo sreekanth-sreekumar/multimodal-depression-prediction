@@ -1,5 +1,7 @@
 import torch
 import argparse
+
+from torch._C import dtype
 from modules.dataset import MultDataset
 from torch.utils.data import DataLoader
 from modules.model import MULTModel
@@ -81,13 +83,14 @@ parser.add_argument('--seed', type=int, default=42,
 parser.add_argument('--load_file', action='store_true',
                     help='use a existing model file')
 
-number_of_epochs = 5
+number_of_epochs = 20
 patience = 20
 
 args = parser.parse_args()
 
-torch.manual_seed(args.seed)
-np.random.seed(args.seed)
+seed = args.seed
+torch.manual_seed(seed)
+np.random.seed(seed)
 
 # Getting each dataset
 train_dataset = MultDataset('train')
@@ -97,7 +100,7 @@ dev_dataset = MultDataset('dev')
 hyp_params = args
 hyp_params.layers = args.nlevels
 hyp_params.n_train, hyp_params.n_valid, hyp_params.n_test = len(train_dataset), len(dev_dataset), len(test_dataset)
-hyp_params.output_dim = 1
+hyp_params.output_dim = 5
 hyp_params.attn_mask = False
 
 hyp_params.orig_d_a, hyp_params.orig_d_v, hyp_params.orig_d_l = train_dataset.get_dim()
@@ -120,7 +123,7 @@ device = torch.device('cuda' if use_cuda else 'cpu')
 model.to(device)
 
 load_params = {
-    'batch_size': 8,
+    'batch_size': 4,
     'collate_fn': MultDataset.get_collate_fn(device)
 }
 
@@ -162,14 +165,14 @@ if __name__ == '__main__':
             text = data['text']
             text_length = data['text_length']
 
-            target = torch.tensor(data['binary'], dtype=torch.float).unsqueeze(1).to(device)
+            target = torch.tensor(data['five_classification']).to(device)
 
             text_mask = mask_attn(text_length, text.shape[1], device)
             audio_mask = mask_attn(audio_length, audio.shape[1], device)
             video_mask = mask_attn(video_length, video.shape[1], device)
-            with autocast(device_type='cuda'):
-                out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
-                loss = criterion(out, target)
+        
+            out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
+            loss = criterion(out, target)
             losses.append(loss.item())
             loss.backward()
 
@@ -191,17 +194,20 @@ if __name__ == '__main__':
                 text = data['text']
                 text_length = data['text_length']
 
-                target = data['binary']
+                target = data['five_classification']
 
                 text_mask = mask_attn(text_length, text.shape[1], device)
                 audio_mask = mask_attn(audio_length, audio.shape[1], device)
                 video_mask = mask_attn(video_length, video.shape[1], device)
 
                 out = model(text, audio, video, text_mask, audio_mask, video_mask, device)
-                correct = torch.eq(out, torch.Tensor(target))
-                accuracies.append(float(correct))
+                preds = torch.argmax(out, dim=1)
+                correct = torch.eq(torch.cuda.IntTensor(target), preds)
+                accuracies.extend([float(i) for i in correct])
             
+            print('Accuracies', accuracies)
             sum_accuracy = np.sum(accuracies)
+            print('Sum: ', sum_accuracy)
             cur_acc = sum_accuracy/len(dev_dataset)
 
             print('Accuracy for epoch: ', epoch, " is ",  round(cur_acc, 5))
